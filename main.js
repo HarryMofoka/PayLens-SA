@@ -2,6 +2,9 @@ import './style.css'
 import { SALARY_DATA } from './src/data/salaries.js'
 import { MARKET_DATA, getMarketData } from './src/data/marketValues.js'
 import { COMPANY_DATA } from './src/data/companyData.js'
+import { COL_DATA, COL_INSIGHTS } from './src/data/colData.js'
+import { POLL_DATA } from './src/data/pollData.js'
+import { FORUM_DATA } from './src/data/forumData.js'
 
 // State
 const state = {
@@ -74,6 +77,23 @@ const trendingSkillsList = document.getElementById('trending-skills-list');
 const topEmployersPanel = document.getElementById('top-employers');
 const employersList = document.getElementById('employers-list');
 
+// COL Elements
+const colCard = document.getElementById('col-card');
+const colRealValue = document.getElementById('col-real-value');
+const colIndexVal = document.getElementById('col-index-val');
+const colInsight = document.getElementById('col-insight');
+
+// Poll Elements
+const pollQuestion = document.getElementById('poll-question');
+const pollOptions = document.getElementById('poll-options');
+const pollResults = document.getElementById('poll-results');
+
+// Forum Elements
+const forumFeed = document.getElementById('forum-feed');
+const askBtn = document.getElementById('ask-btn');
+const askModal = document.getElementById('ask-modal');
+const askForm = document.getElementById('ask-form');
+
 // Format Currency (ZAR)
 const formatCurrency = (val) => {
     return new Intl.NumberFormat('en-ZA', {
@@ -108,12 +128,15 @@ const init = () => {
     populateIndustries();
     populateRegions();
     populateQualifications();
-    populateMarketPulse(); // Initialize general market data
+    populateMarketPulse();
+    initPoll();
+    renderForum(); // Load Forum
     setupEventListeners();
     setupModalListeners();
     setupAuthListeners();
     setupCalculatorListeners();
     setupCareerListeners();
+    setupForumListeners();
 
     // Set defaults
     regionSelect.value = 'national';
@@ -309,12 +332,6 @@ const calculateEstimate = (exp, certs, hasSkills) => {
     const totalMultiplier = 1 + expFactor + certFactor + skillFactor;
 
     estimate = estimate * totalMultiplier;
-
-    // HACK: Start the estimate lower for "Entry" level input if exp is 0 to avoid everyone getting midpoint+
-    // If exp is low relative to level, dampen it.
-    // Actually, standard scoring usually assumes "Midpoint" is "Competent".
-    // Let's constrain the estimate to not exceed Max + 20% (Exceeds expectations)
-    // And not fall below Min.
 
     if (estimate < min) estimate = min;
     const hardCap = max * 1.2;
@@ -577,6 +594,202 @@ const updateTopEmployers = (roleId) => {
 };
 // --- END COMPANY COMPARISON LOGIC ---
 
+// --- COL LOGIC ---
+const updateCOLInfo = (nominalSalary) => {
+    if (state.region === 'national') {
+        colCard.classList.add('hidden');
+        return;
+    }
+
+    const colIndex = COL_DATA[state.region];
+    if (!colIndex) {
+        colCard.classList.add('hidden');
+        return;
+    }
+
+    colCard.classList.remove('hidden');
+
+    const purchasingPowerFactor = 100 / colIndex;
+    const realValue = nominalSalary * purchasingPowerFactor;
+
+    colIndexVal.textContent = colIndex;
+    colRealValue.textContent = `~ R ${formatCurrency(Math.round(realValue))}`;
+
+    const insight = COL_INSIGHTS[state.region] || "";
+    if (colIndex > 100) {
+        colInsight.textContent = `${insight} Living costs are ${colIndex - 100}% above national average.`;
+        colRealValue.style.color = '#ef4444'; // Red warning
+    } else if (colIndex < 100) {
+        colInsight.textContent = `${insight} Your money goes ${100 - colIndex}% further here!`;
+        colRealValue.style.color = '#10b981'; // Green positive
+    } else {
+        colInsight.textContent = "Standard national cost of living.";
+        colRealValue.style.color = 'var(--text-primary)';
+    }
+};
+// --- END COL LOGIC ---
+
+// --- POLL LOGIC ---
+const initPoll = () => {
+    pollQuestion.textContent = POLL_DATA.question;
+
+    // Check if voted
+    const votedId = localStorage.getItem(`poll_voted_${POLL_DATA.id}`);
+
+    if (votedId) {
+        renderPollResults(POLL_DATA);
+    } else {
+        renderPollVoting(POLL_DATA);
+    }
+};
+
+const renderPollVoting = (data) => {
+    pollOptions.innerHTML = '';
+    pollOptions.classList.remove('hidden');
+    pollResults.classList.add('hidden');
+
+    // 1. Render Options
+    data.options.forEach((opt, index) => {
+        const label = document.createElement('label');
+        label.className = 'poll-option';
+        label.innerHTML = `
+            <input type="radio" name="poll-opt" value="${opt.id}">
+            <span>${opt.label}</span>
+        `;
+        pollOptions.appendChild(label);
+    });
+
+    // 2. Render Submit Button
+    const btn = document.createElement('button');
+    btn.className = 'poll-submit-btn';
+    btn.textContent = 'Vote';
+    btn.onclick = handleVote;
+    pollOptions.appendChild(btn);
+};
+
+const handleVote = () => {
+    const selected = document.querySelector('input[name="poll-opt"]:checked');
+    if (!selected) {
+        alert("Please select an option!");
+        return;
+    }
+
+    const voteId = parseInt(selected.value);
+
+    // 1. Update Mock Data (In memory)
+    const opt = POLL_DATA.options.find(o => o.id === voteId);
+    if (opt) {
+        opt.votes++;
+        POLL_DATA.totalVotes++;
+    }
+
+    // 2. Persist
+    localStorage.setItem(`poll_voted_${POLL_DATA.id}`, voteId);
+
+    // 3. Show Results
+    renderPollResults(POLL_DATA);
+};
+
+const renderPollResults = (data) => {
+    pollOptions.classList.add('hidden');
+    pollResults.classList.remove('hidden');
+    pollResults.innerHTML = '';
+
+    data.options.forEach(opt => {
+        const percent = Math.round((opt.votes / data.totalVotes) * 100);
+
+        const el = document.createElement('div');
+        el.className = 'poll-result-item';
+        el.innerHTML = `
+            <div class="poll-result-label">
+                <span>${opt.label}</span>
+                <span>${percent}%</span>
+            </div>
+            <div class="poll-result-bar-bg">
+                <div class="poll-result-bar-fill" style="width: ${percent}%"></div>
+            </div>
+        `;
+        pollResults.appendChild(el);
+    });
+
+    const totalEl = document.createElement('div');
+    totalEl.className = 'poll-total';
+    totalEl.textContent = `${data.totalVotes} votes total`;
+    pollResults.appendChild(totalEl);
+};
+// --- END POLL LOGIC ---
+
+// --- FORUM LOGIC ---
+let feedData = [...FORUM_DATA]; // Local snapshot
+
+const renderForum = () => {
+    forumFeed.innerHTML = '';
+
+    feedData.forEach(post => {
+        const el = document.createElement('div');
+        el.className = 'forum-card';
+
+        const badge = post.badge ? `<span class="badge">${post.badge}</span>` : '';
+
+        // Render Answers
+        let answersHtml = '';
+        if (post.answers.length > 0) {
+            answersHtml = '<div class="answer-list">';
+            post.answers.forEach(ans => {
+                const verifiedTick = ans.isVerified ? '<span class="verified-badge" title="Verified">✓</span>' : '';
+                answersHtml += `
+                    <div class="answer-item">
+                        <div class="answer-meta">${ans.author} ${verifiedTick}</div>
+                        <div>${ans.text}</div>
+                    </div>
+                `;
+            });
+            answersHtml += '</div>';
+        } else {
+            answersHtml = '<div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.5rem">No answers yet. Be the first!</div>';
+        }
+
+        el.innerHTML = `
+            <div class="forum-meta">Asked by ${post.author} • ${post.timestamp} ${badge}</div>
+            <div class="forum-title">${post.title}</div>
+            <div class="forum-stats">
+                <span class="vote-control">▲ ${post.votes}</span>
+                <span>${post.answers.length} Answers</span>
+            </div>
+            ${answersHtml}
+            <button class="reply-btn" onclick="alert('Login to reply')">Reply</button>
+        `;
+        forumFeed.appendChild(el);
+    });
+};
+
+const setupForumListeners = () => {
+    askBtn.addEventListener('click', () => {
+        askModal.classList.remove('hidden');
+    });
+
+    askForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const text = document.getElementById('ask-input').value;
+        const newQ = {
+            id: Date.now(),
+            author: "Anon",
+            badge: "💎 Contributor", // Reward for asking
+            timestamp: "Just now",
+            title: text,
+            votes: 0,
+            answers: []
+        };
+
+        feedData.unshift(newQ); // Add to top
+        renderForum();
+
+        askModal.classList.add('hidden');
+        askForm.reset();
+    });
+};
+// --- END FORUM LOGIC ---
+
 const populateIndustries = () => {
     const options = SALARY_DATA.industries.map(ind => `<option value="${ind.id}">${ind.name}</option>`).join('');
 
@@ -811,11 +1024,12 @@ const updateDisplay = () => {
         chartContainer.innerHTML = '';
         demandIndicator.classList.add('hidden');
         topEmployersPanel.classList.add('hidden');
+        colCard.classList.add('hidden');
         return;
     }
 
     updateMarketPulseForRole(roleData.id);
-    updateTopEmployers(roleData.id); // New function
+    updateTopEmployers(roleData.id);
 
     const rawRange = roleData.levels[state.level];
     if (!rawRange) return;
@@ -825,6 +1039,7 @@ const updateDisplay = () => {
 
     const min = Math.round(rawRange.min * factor);
     const max = Math.round(rawRange.max * factor);
+    const medianSalary = (min + max) / 2;
 
     animateValue(salaryAmountEl, min, max);
 
@@ -833,6 +1048,7 @@ const updateDisplay = () => {
     monthlyAmountEl.textContent = `R ${formatCurrency(monthly)}`;
 
     renderChart(roleData, factor);
+    updateCOLInfo(medianSalary);
 };
 
 const renderChart = (roleData, factor) => {

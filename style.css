@@ -372,6 +372,98 @@ select:focus {
   width: 100%;
 }
 
+/* Poll Card */
+.poll-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  /* Make it span like others in the market pulse grid */
+  display: flex;
+  flex-direction: column;
+}
+
+.poll-question {
+  font-weight: 600;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+.poll-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
+  /* Prepare for hover border */
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 0.5rem;
+  transition: all 0.2s;
+}
+
+.poll-option:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.poll-option input[type="radio"] {
+  accent-color: var(--accent-color);
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.poll-submit-btn {
+  margin-top: 0.5rem;
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.poll-submit-btn:hover {
+  background: var(--primary-hover);
+}
+
+/* Poll Results */
+.poll-result-item {
+  margin-bottom: 0.75rem;
+}
+
+.poll-result-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+  color: var(--text-secondary);
+}
+
+.poll-result-bar-bg {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.poll-result-bar-fill {
+  height: 100%;
+  background: var(--accent-color);
+  border-radius: 4px;
+  transition: width 1s ease-out;
+}
+
+.poll-total {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 1rem;
+}
+
 /* Modal Styles */
 .modal {
   position: fixed;
@@ -644,6 +736,74 @@ select:focus {
   font-weight: 600;
   color: var(--accent-color);
   font-size: 0.9rem;
+}
+
+
+
+/* COL Card */
+.col-card {
+  margin-top: 2rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.col-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--secondary-color);
+}
+
+.col-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+}
+
+.col-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.col-metric {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.col-label {
+  color: var(--text-secondary);
+}
+
+.col-value {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+#col-real-value {
+  color: var(--secondary-color);
+  /* Highlight Real Value */
+  font-size: 1rem;
+}
+
+.col-insight {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .career-intro {
