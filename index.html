@@ -26,6 +26,7 @@
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
           </button>
+          <button id="premium-btn" class="btn-premium small">Pro 👑</button>
           <button id="contribute-btn" class="btn-primary small">Contribute</button>
         </div>
       </div>
@@ -210,6 +211,16 @@
               <!-- Populated JS (Contextual to selected role or general) -->
               <p class="empty-state">Select a role to see skills.</p>
             </div>
+            <button id="analyze-skills-btn" class="btn-text hidden"
+              style="margin-top: 1rem; width: 100%; text-align: center;">Analyze My CV</button>
+          </div>
+
+          <!-- Featured Jobs (Phase 5.3) -->
+          <div class="market-card" id="jobs-card">
+            <h3>Featured Opportunities</h3>
+            <div id="jobs-list" class="jobs-list">
+              <p class="empty-state">No active listings.</p>
+            </div>
           </div>
 
           <!-- Poll Card (Phase 4.2) -->
@@ -245,7 +256,87 @@
 
     <footer class="app-footer">
       <p>&copy; 2025 PayLens SA. Data is for estimation only.</p>
+      <div class="footer-links">
+        <a href="#" id="employer-link">For Employers</a>
+      </div>
     </footer>
+  </div>
+
+  <!-- Recruiter Portal Modal -->
+  <div id="recruiter-modal" class="modal hidden">
+    <div class="modal-content large">
+      <span class="close-modal" data-target="recruiter-modal">&times;</span>
+
+      <div class="recruiter-header">
+        <h2>Recruiter Portal 💼</h2>
+        <div class="recruiter-tabs">
+          <button class="tab-btn active" data-tab="benchmark">Benchmark Offer</button>
+          <button class="tab-btn" data-tab="post-job">Post a Job</button>
+          <button class="tab-btn" data-tab="api">Developer API</button>
+        </div>
+      </div>
+
+      <!-- Tab: Benchmark -->
+      <div id="tab-benchmark" class="tab-content">
+        <div class="benchmark-tool">
+          <h3>Is your offer competitive?</h3>
+          <form id="benchmark-form">
+            <div class="form-row">
+              <select id="bench-role" required>
+                <option>Select Role...</option>
+              </select>
+              <select id="bench-region" required>
+                <option>Select Region...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Offer Amount (Annual CTC)</label>
+              <input type="number" id="bench-offer" placeholder="e.g. 650000" required>
+            </div>
+            <button type="submit" class="btn-primary">Analyze Offer</button>
+          </form>
+
+          <div id="bench-result" class="bench-result hidden">
+            <div class="bench-score" id="bench-score-text">Top 10%</div>
+            <p id="bench-desc">This offer is highly competitive for Gauteng.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Post Job -->
+      <div id="tab-post-job" class="tab-content hidden">
+        <h3>Create a Listing</h3>
+        <form id="job-form">
+          <div class="form-group">
+            <label>Job Title</label>
+            <input type="text" id="job-title" placeholder="e.g. Senior Backend Engineer" required>
+          </div>
+          <div class="form-group">
+            <label>Company Name</label>
+            <input type="text" id="job-company" placeholder="e.g. Fintech Co." required>
+          </div>
+          <div class="form-row">
+            <input type="number" id="job-min" placeholder="Min Salary" required>
+            <input type="number" id="job-max" placeholder="Max Salary" required>
+          </div>
+          <button type="submit" class="btn-primary">Post Listing (mock)</button>
+        </form>
+      </div>
+
+      <!-- Tab: API -->
+      <div id="tab-api" class="tab-content hidden">
+        <h3>Salary Data API</h3>
+        <p>Access our market data programmatically.</p>
+        <div class="api-box">
+          <code id="api-key-display">Click generate to get key...</code>
+          <button id="generate-api-btn" class="btn-secondary small">Generate Key</button>
+        </div>
+        <div class="api-docs">
+          <p>GET /api/v1/salary?role=software-engineer&region=gt</p>
+        </div>
+      </div>
+
+    </div>
   </div>
   <!-- Submission Modal -->
   <div id="submission-modal" class="modal hidden">
@@ -274,6 +365,45 @@
 
         <button type="submit" class="btn-primary full-width">Submit Anonymously</button>
       </form>
+    </div>
+  </div>
+  </div>
+  <!-- CV Analyzer Modal (Phase 5.2) -->
+  <div id="cv-modal" class="modal hidden">
+    <div class="modal-content">
+      <span class="close-modal" data-target="cv-modal">&times;</span>
+      <h2>Skill Gap Analyzer</h2>
+      <p>Paste your CV text to identify missing high-value skills for this role.</p>
+
+      <div class="form-group">
+        <textarea id="cv-text" rows="8" placeholder="Paste your CV content here..." class="cv-input"></textarea>
+      </div>
+
+      <button id="analyze-cv-btn" class="btn-primary full-width">Analyze Skills</button>
+
+      <div id="cv-results" class="cv-results hidden">
+        <div class="cv-score-container">
+          <div class="cv-score-circle">
+            <span id="cv-match-score">0%</span>
+          </div>
+          <div class="cv-score-label">Match Score</div>
+        </div>
+
+        <div class="cv-lists">
+          <div class="cv-list-group">
+            <h4>✅ You Have</h4>
+            <ul id="cv-found-list" class="skill-list-check"></ul>
+          </div>
+          <div class="cv-list-group">
+            <h4>🚀 To Learn</h4>
+            <ul id="cv-missing-list" class="skill-list-missing"></ul>
+          </div>
+        </div>
+
+        <div class="cv-recommendation">
+          <p>💡 Learning these Top 3 missing skills could boost your potential by <strong>~15-20%</strong>.</p>
+        </div>
+      </div>
     </div>
   </div>
   <!-- Dashboard Modal -->
@@ -355,6 +485,71 @@
         </div>
         <button type="submit" class="btn-primary full-width">Post Question</button>
       </form>
+    </div>
+  </div>
+
+  </div>
+  </div>
+
+  <!-- Premium Analytics Modal -->
+  <div id="premium-modal" class="modal hidden">
+    <div class="modal-content large">
+      <span class="close-modal" data-target="premium-modal">&times;</span>
+
+      <!-- Locked State -->
+      <div id="premium-locked" class="premium-locked-view text-center">
+        <h2>Unlock Professional Insights 👑</h2>
+        <p class="premium-pitch">Get the complete picture with PayLens Pro.</p>
+
+        <div class="premium-features-list">
+          <div class="feature-item">📊 <strong>Province-by-Province Comparison</strong><br>See exactly where your role
+            pays the most across South Africa.</div>
+          <div class="feature-item">📈 <strong>Advanced Forecasting</strong><br>Detailed 10-year salary projection
+            table.</div>
+          <div class="feature-item">💾 <strong>Data Export</strong><br>Download raw salary data for your records.</div>
+        </div>
+
+        <button id="unlock-btn" class="btn-premium">Upgrade for R49/mo</button>
+      </div>
+
+      <!-- Unlocked State -->
+      <div id="premium-unlocked" class="premium-unlocked-view hidden">
+        <div class="premium-header">
+          <h2>Career Analytics Dashboard</h2>
+          <div class="export-actions">
+            <button id="export-csv-btn" class="btn-secondary small">Download CSV</button>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <!-- Regional Chart -->
+          <div class="dashboard-card full-width">
+            <h3>Regional Salary Heatmap</h3>
+            <p class="card-subtitle">Comparing <span id="premium-role-name">Role</span> across all provinces</p>
+            <div id="regional-chart" class="chart-container large"></div>
+          </div>
+
+          <!-- Forecast Table -->
+          <div class="dashboard-card full-width">
+            <h3>10-Year Forecast</h3>
+            <div class="table-responsive">
+              <table class="forecast-table" id="forecast-table">
+                <thead>
+                  <tr>
+                    <th>Year</th>
+                    <th>Experience Level</th>
+                    <th>Projected Annual CTC</th>
+                    <th>Growth %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- JS Populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

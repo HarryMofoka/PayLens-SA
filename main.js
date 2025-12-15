@@ -15,6 +15,7 @@ const state = {
     qualification: 'any',
     searchQuery: '',
     isLoggedIn: false, // Auth state
+    isPremium: false, // Premium state
     user: null,
     careerProjectionYear: 0 // 0 to 10
 };
@@ -30,7 +31,7 @@ const salaryAmountEl = document.getElementById('salary-amount');
 const monthlyAmountEl = document.getElementById('salary-monthly-amount');
 const chartContainer = document.getElementById('salary-chart');
 
-// Modal Elements - Contribution
+// Modal Elements
 const contributeBtn = document.getElementById('contribute-btn');
 const submissionModal = document.getElementById('submission-modal');
 const closeModalBtns = document.querySelectorAll('.close-modal');
@@ -40,11 +41,46 @@ const submitIndustrySelect = document.getElementById('submit-industry');
 // Auth & Dashboard Elements
 const authBtn = document.getElementById('auth-btn');
 const profileBtn = document.getElementById('profile-btn');
+const premiumBtn = document.getElementById('premium-btn');
 const dashboardModal = document.getElementById('dashboard-modal');
 const savedRolesList = document.getElementById('saved-roles-list');
 const contributionsList = document.getElementById('contributions-list');
 const logoutBtn = document.getElementById('logout-btn');
 const saveRoleBtn = document.getElementById('save-role-btn');
+
+// Premium Elements
+const premiumModal = document.getElementById('premium-modal');
+const premiumLocked = document.getElementById('premium-locked');
+const premiumUnlocked = document.getElementById('premium-unlocked');
+const unlockBtn = document.getElementById('unlock-btn');
+const exportCsvBtn = document.getElementById('export-csv-btn');
+const regionalChart = document.getElementById('regional-chart');
+const forecastTableBody = document.querySelector('#forecast-table tbody');
+const premiumRoleName = document.getElementById('premium-role-name');
+
+// CV Analyzer Elements
+const analyzeSkillsBtn = document.getElementById('analyze-skills-btn');
+const cvModal = document.getElementById('cv-modal');
+const cvText = document.getElementById('cv-text');
+const analyzeCvBtn = document.getElementById('analyze-cv-btn');
+const cvResults = document.getElementById('cv-results');
+const cvMatchScore = document.getElementById('cv-match-score');
+const cvFoundList = document.getElementById('cv-found-list');
+const cvMissingList = document.getElementById('cv-missing-list');
+
+// Recruiter Elements
+const employerLink = document.getElementById('employer-link');
+const recruiterModal = document.getElementById('recruiter-modal');
+const tabBtns = document.querySelectorAll('.tab-btn');
+const tabContents = document.querySelectorAll('.tab-content');
+const benchForm = document.getElementById('benchmark-form');
+const benchRoleSelect = document.getElementById('bench-role');
+const benchRegionSelect = document.getElementById('bench-region');
+const benchResult = document.getElementById('bench-result');
+const jobForm = document.getElementById('job-form');
+const generateApiBtn = document.getElementById('generate-api-btn');
+const apiKeyDisplay = document.getElementById('api-key-display');
+const jobsList = document.getElementById('jobs-list');
 
 // Calculator Elements
 const personalizeBtn = document.getElementById('personalize-btn');
@@ -94,6 +130,12 @@ const askBtn = document.getElementById('ask-btn');
 const askModal = document.getElementById('ask-modal');
 const askForm = document.getElementById('ask-form');
 
+// Mock Jobs Data
+let activeJobs = [
+    { title: "Senior React Developer", company: "TechCorp", min: 750000, max: 950000, region: "gt" },
+    { title: "Financial Analyst", company: "InvestBank", min: 550000, max: 700000, region: "wc" }
+];
+
 // Format Currency (ZAR)
 const formatCurrency = (val) => {
     return new Intl.NumberFormat('en-ZA', {
@@ -124,19 +166,24 @@ const capitalizeFirstLetter = (string) => {
 const init = () => {
     // Check Auth
     checkAuth();
+    checkPremium();
 
     populateIndustries();
     populateRegions();
     populateQualifications();
     populateMarketPulse();
     initPoll();
-    renderForum(); // Load Forum
+    renderForum();
+    renderJobs(); // New Phase 5.3
     setupEventListeners();
     setupModalListeners();
     setupAuthListeners();
     setupCalculatorListeners();
     setupCareerListeners();
     setupForumListeners();
+    setupPremiumListeners();
+    setupCVAnalyzerListeners();
+    setupRecruiterListeners(); // New Phase 5.3
 
     // Set defaults
     regionSelect.value = 'national';
@@ -160,8 +207,12 @@ const checkAuth = () => {
     updateSaveButtonState();
 };
 
+const checkPremium = () => {
+    const isPro = localStorage.getItem('is_premium') === 'true';
+    state.isPremium = isPro;
+};
+
 const login = () => {
-    // Mock Login
     const mockUser = {
         name: "User",
         email: "user@example.com"
@@ -187,18 +238,14 @@ const saveCurrentRole = () => {
     const roleId = state.role;
     const industryId = state.industry;
 
-    // Get existing saved
     const saved = JSON.parse(localStorage.getItem('saved_roles') || '[]');
 
-    // Check if exists
     const exists = saved.find(r => r.roleId === roleId && r.industryId === industryId);
     if (exists) {
-        // Unsave?
         const newSaved = saved.filter(r => !(r.roleId === roleId && r.industryId === industryId));
         localStorage.setItem('saved_roles', JSON.stringify(newSaved));
         saveRoleBtn.classList.remove('active');
     } else {
-        // Save
         const roleData = getSelectedRoleData();
         saved.push({
             roleId,
@@ -245,17 +292,15 @@ const loadDashboard = () => {
         <div class="saved-item-meta">Saved</div>
       `;
             el.addEventListener('click', () => {
-                // Load this role
                 state.searchQuery = '';
                 searchInput.value = '';
                 state.industry = item.industryId;
                 industrySelect.disabled = false;
                 industrySelect.value = item.industryId;
                 state.role = item.roleId;
-                populateRoles(); // This refreshes the list based on industry
+                populateRoles();
                 roleSelect.value = `${item.industryId}|${item.roleId}`;
 
-                // Trigger updates
                 const roleData = getSelectedRoleData();
                 populateLevels(roleData);
                 updateDisplay();
@@ -285,6 +330,380 @@ const loadDashboard = () => {
     }
 };
 // --- END AUTH LOGIC ---
+
+// --- PREMIUM DASHBOARD LOGIC ---
+const setupPremiumListeners = () => {
+    premiumBtn.addEventListener('click', () => {
+        premiumModal.classList.remove('hidden');
+        renderPremiumContent();
+    });
+
+    unlockBtn.addEventListener('click', () => {
+        if (confirm("Confirm subscription for R49/month?")) {
+            localStorage.setItem('is_premium', 'true');
+            state.isPremium = true;
+            renderPremiumContent();
+        }
+    });
+
+    exportCsvBtn.addEventListener('click', exportToCSV);
+};
+
+const renderPremiumContent = () => {
+    if (!state.isPremium) {
+        premiumLocked.classList.remove('hidden');
+        premiumUnlocked.classList.add('hidden');
+    } else {
+        premiumLocked.classList.add('hidden');
+        premiumUnlocked.classList.remove('hidden');
+
+        const roleData = getSelectedRoleData();
+        if (roleData) {
+            premiumRoleName.textContent = roleData.title;
+            renderRegionalHeatmap(roleData);
+            renderForecastTable(roleData);
+        } else {
+            premiumRoleName.textContent = "Select a role first";
+            regionalChart.innerHTML = '<p style="margin:auto;color:gray">Please select a role on the main screen to view analytics.</p>';
+            forecastTableBody.innerHTML = '';
+        }
+    }
+};
+
+const renderRegionalHeatmap = (roleData) => {
+    regionalChart.innerHTML = '';
+
+    // Calculate salary for this role in ALL regions
+    const levelRange = roleData.levels[state.level];
+    if (!levelRange) return;
+
+    let maxVal = 0;
+    const regionSalaries = SALARY_DATA.regions.map(reg => {
+        const val = (levelRange.min + levelRange.max) / 2 * reg.factor;
+        if (val > maxVal) maxVal = val;
+        return { name: reg.name, id: reg.id, val };
+    });
+
+    regionSalaries.forEach(data => {
+        const heightPct = (data.val / maxVal) * 100;
+
+        const group = document.createElement('div');
+        group.className = 'reg-bar-group';
+
+        const bar = document.createElement('div');
+        bar.className = 'reg-bar';
+        bar.style.height = `${heightPct}%`;
+        bar.title = `${data.name}: R ${formatCurrency(Math.round(data.val))}`;
+
+        const label = document.createElement('div');
+        label.className = 'reg-label';
+        label.textContent = data.id.toUpperCase();
+
+        group.appendChild(bar);
+        group.appendChild(label);
+        regionalChart.appendChild(group);
+    });
+};
+
+const renderForecastTable = (roleData) => {
+    forecastTableBody.innerHTML = '';
+    const levelRange = roleData.levels[state.level];
+    if (!levelRange) return;
+
+    // Assume National Average for projection base
+    const base = (levelRange.min + levelRange.max) / 2;
+
+    // Simple projection logic: 5% annual increase
+    for (let year = 0; year <= 10; year++) {
+        const projected = base * Math.pow(1.05, year);
+        const growth = year === 0 ? 0 : ((projected - base) / base * 100);
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>+${year} Years</td>
+            <td>${capitalizeFirstLetter(state.level)}</td>
+            <td>R ${formatCurrency(Math.round(projected))}</td>
+            <td style="color:${growth > 0 ? '#10b981' : ''}">${growth.toFixed(1)}%</td>
+        `;
+        forecastTableBody.appendChild(row);
+    }
+};
+
+const exportToCSV = () => {
+    const roleData = getSelectedRoleData();
+    if (!roleData) {
+        alert("Select a role first.");
+        return;
+    }
+
+    const rows = [
+        ["Industry", "Role", "Region", "Level", "Min Salary", "Max Salary", "Median Salary"]
+    ];
+
+    SALARY_DATA.regions.forEach(reg => {
+        Object.keys(roleData.levels).forEach(lvl => {
+            const range = roleData.levels[lvl];
+            const min = Math.round(range.min * reg.factor);
+            const max = Math.round(range.max * reg.factor);
+            const med = Math.round((min + max) / 2);
+
+            rows.push([
+                SALARY_DATA.industries.find(i => i.id === state.industry)?.name,
+                roleData.title,
+                reg.name,
+                lvl,
+                min,
+                max,
+                med
+            ]);
+        });
+    });
+
+    let csvContent = "data:text/csv;charset=utf-8,"
+        + rows.map(e => e.join(",")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${roleData.title}_salary_export.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+// --- END PREMIUM LOGIC ---
+
+// --- CV ANALYZER LOGIC ---
+const setupCVAnalyzerListeners = () => {
+    if (analyzeSkillsBtn) {
+        analyzeSkillsBtn.addEventListener('click', () => {
+            if (!state.role) {
+                alert("Please select a role first!");
+                return;
+            }
+            cvModal.classList.remove('hidden');
+            cvResults.classList.add('hidden');
+            cvText.value = '';
+        });
+
+        analyzeCvBtn.addEventListener('click', analyzeCV);
+    }
+};
+
+const analyzeCV = () => {
+    const text = cvText.value.toLowerCase();
+    if (!text) {
+        alert("Please paste your CV content.");
+        return;
+    }
+
+    // 1. Get Skills for Current Role
+    const market = getMarketData(state.role);
+    const requiredSkills = market.topSkills; // Array of {name, count}
+
+    if (!requiredSkills || requiredSkills.length === 0) {
+        alert("No skills data available for this role.");
+        return;
+    }
+
+    // 2. Scan Text for Matches
+    const found = [];
+    const missing = [];
+
+    requiredSkills.forEach(skill => {
+        if (text.includes(skill.name.toLowerCase())) {
+            found.push(skill.name);
+        } else {
+            missing.push(skill.name);
+        }
+    });
+
+    // 3. Score
+    const score = Math.round((found.length / requiredSkills.length) * 100);
+
+    // 4. Render
+    cvMatchScore.textContent = `${score}%`;
+
+    if (score >= 80) cvMatchScore.style.color = '#10b981';
+    else if (score >= 50) cvMatchScore.style.color = '#fbbf24';
+    else cvMatchScore.style.color = '#ef4444';
+
+    cvFoundList.innerHTML = '';
+    if (found.length === 0) cvFoundList.innerHTML = '<li>None found</li>';
+    found.forEach(s => {
+        const li = document.createElement('li');
+        li.textContent = `✓ ${s}`;
+        cvFoundList.appendChild(li);
+    });
+
+    cvMissingList.innerHTML = '';
+    if (missing.length === 0) cvMissingList.innerHTML = '<li style="color:#10b981">All Clear!</li>';
+    missing.forEach(s => {
+        const li = document.createElement('li');
+        li.textContent = `✗ ${s}`;
+        cvMissingList.appendChild(li);
+    });
+
+    cvResults.classList.remove('hidden');
+};
+// --- END CV ANALYZER LOGIC ---
+
+// --- RECRUITER TOOLS LOGIC ---
+const setupRecruiterListeners = () => {
+    if (employerLink) {
+        employerLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            recruiterModal.classList.remove('hidden');
+            // Populate benchmark selects
+            populateBenchmarkSelects();
+        });
+    }
+
+    // Tabs
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(c => c.classList.add('hidden'));
+
+            btn.classList.add('active');
+            const target = btn.dataset.tab;
+            document.getElementById(`tab-${target}`).classList.remove('hidden');
+        });
+    });
+
+    // Benchmark Form
+    if (benchForm) {
+        benchForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const roleId = benchRoleSelect.value;
+            const regionId = benchRegionSelect.value;
+            const offer = parseFloat(document.getElementById('bench-offer').value);
+
+            runBenchmark(roleId, regionId, offer);
+        });
+    }
+
+    // Job Form
+    if (jobForm) {
+        jobForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const title = document.getElementById('job-title').value;
+            const company = document.getElementById('job-company').value;
+            const min = parseFloat(document.getElementById('job-min').value);
+            const max = parseFloat(document.getElementById('job-max').value);
+
+            activeJobs.unshift({ title, company, min, max, region: 'national' });
+            renderJobs();
+
+            alert('Job Posted Successfully!');
+            jobForm.reset();
+            // Switch to jobs view via tab? Or just stay
+        });
+    }
+
+    // API
+    if (generateApiBtn) {
+        generateApiBtn.addEventListener('click', () => {
+            apiKeyDisplay.textContent = "pl_" + Math.random().toString(36).substr(2, 16);
+            apiKeyDisplay.style.color = "#10b981";
+        });
+    }
+};
+
+const populateBenchmarkSelects = () => {
+    // Populate Role
+    benchRoleSelect.innerHTML = '<option value="">Select Role...</option>';
+    SALARY_DATA.industries.forEach(ind => {
+        ind.roles.forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r.id;
+            opt.textContent = r.title;
+            benchRoleSelect.appendChild(opt);
+        });
+    });
+
+    // Populate Region
+    benchRegionSelect.innerHTML = '<option value="">Select Region...</option>';
+    SALARY_DATA.regions.forEach(reg => {
+        const opt = document.createElement('option');
+        opt.value = reg.id;
+        opt.textContent = reg.name;
+        benchRegionSelect.appendChild(opt);
+    });
+};
+
+const runBenchmark = (roleId, regionId, offer) => {
+    // Determine bracket
+    // Simplified: Find the role, get average of all levels for that region
+    // Or compare against Senior level as default benchmark
+
+    // Find role object
+    let roleObj = null;
+    SALARY_DATA.industries.forEach(ind => {
+        const found = ind.roles.find(r => r.id === roleId);
+        if (found) roleObj = found;
+    });
+
+    if (!roleObj) return;
+
+    const reg = SALARY_DATA.regions.find(r => r.id === regionId);
+    const factor = reg ? reg.factor : 1.0;
+
+    // Compare against "Senior" level max
+    const seniorRange = roleObj.levels['senior'] || Object.values(roleObj.levels)[0];
+    const marketMax = seniorRange.max * factor;
+    const marketMin = seniorRange.min * factor;
+
+    const scoreEl = document.getElementById('bench-score-text');
+    const descEl = document.getElementById('bench-desc');
+
+    let percentile = 0;
+
+    if (offer >= marketMax) {
+        percentile = 5; // Top 5%
+        scoreEl.textContent = "Top 5% 🚀";
+        scoreEl.style.color = "#10b981";
+        descEl.textContent = "This offer beats almost all market rates.";
+    } else if (offer >= (marketMax + marketMin) / 2) {
+        percentile = 40;
+        scoreEl.textContent = "Top 40%";
+        scoreEl.style.color = "#10b981";
+        descEl.textContent = "Competitive offer, above market median.";
+    } else if (offer >= marketMin) {
+        percentile = 70;
+        scoreEl.textContent = "Market Related";
+        scoreEl.style.color = "#fbbf24";
+        descEl.textContent = "Standard market rate.";
+    } else {
+        percentile = 90;
+        scoreEl.textContent = "Below Market";
+        scoreEl.style.color = "#ef4444";
+        descEl.textContent = "This offer might struggle to attract talent.";
+    }
+
+    benchResult.classList.remove('hidden');
+};
+
+const renderJobs = () => {
+    if (!jobsList) return;
+    jobsList.innerHTML = '';
+
+    if (activeJobs.length === 0) {
+        jobsList.innerHTML = '<p class="empty-state">No active listings.</p>';
+        return;
+    }
+
+    activeJobs.forEach(job => {
+        const el = document.createElement('div');
+        el.className = 'job-card';
+        el.innerHTML = `
+            <div class="job-title">${job.title}</div>
+            <div class="job-company">${job.company}</div>
+            <div class="job-salary">R ${formatSymbol(job.min)} - R ${formatSymbol(job.max)}</div>
+        `;
+        jobsList.appendChild(el);
+    });
+};
+// --- END RECRUITER TOOLS LOGIC ---
 
 // --- CALCULATOR LOGIC ---
 const updatePersonalizeButton = () => {
@@ -548,8 +967,12 @@ const updateMarketPulseForRole = (roleId) => {
             tag.textContent = `${skill.name} (${skill.count}%)`; // Mock percentage
             trendingSkillsList.appendChild(tag);
         });
+
+        // Phase 5.2: Show Analyze Button
+        if (analyzeSkillsBtn) analyzeSkillsBtn.classList.remove('hidden');
     } else {
         trendingSkillsList.innerHTML = '<p class="empty-state">No skills data available.</p>';
+        if (analyzeSkillsBtn) analyzeSkillsBtn.classList.add('hidden');
     }
 };
 
@@ -1025,6 +1448,8 @@ const updateDisplay = () => {
         demandIndicator.classList.add('hidden');
         topEmployersPanel.classList.add('hidden');
         colCard.classList.add('hidden');
+        // Hide analyze button if no role
+        if (analyzeSkillsBtn) analyzeSkillsBtn.classList.add('hidden'); // Check existence
         return;
     }
 
